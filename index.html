@@ -17,9 +17,18 @@
 <video id="player" controls></video>
 
 <script>
+const BUFFER_THRESHOLD_SECONDS = 5;
+const RETRY_DELAY_MS = 3000;
+
+const player = document.getElementById("player");
+const statusText = document.getElementById("status");
+
 fetch("src.json")
   .then(res => res.json())
-  .then(data => init(data.videos));
+  .then(data => init(data.videos))
+  .catch(() => {
+    statusText.innerText = "❌ Không thể tải danh sách video.";
+  });
 
 function init(videos) {
   const buttonsDiv = document.getElementById("buttons");
@@ -30,21 +39,12 @@ function init(videos) {
     buttonsDiv.appendChild(btn);
   });
 
-  // preload tất cả video
-  videos.forEach(src => {
-    const v = document.createElement("video");
-    v.src = src;
-    v.preload = "auto";
-  });
-
   loadVideo(videos, 0);
 }
 
-const player = document.getElementById("player");
-const statusText = document.getElementById("status");
-
 function loadVideo(videos, index) {
   statusText.innerText = "⏳ Đang buffer...";
+  player.removeEventListener("progress", checkBuffer);
   player.src = videos[index];
   player.addEventListener("progress", checkBuffer);
 }
@@ -52,7 +52,7 @@ function loadVideo(videos, index) {
 function checkBuffer() {
   if (player.buffered.length > 0) {
     let buffered = player.buffered.end(0);
-    if (buffered > 5) {
+    if (buffered > BUFFER_THRESHOLD_SECONDS) {
       player.removeEventListener("progress", checkBuffer);
       statusText.innerText = "▶️ Đang phát";
       player.play().catch(() => {});
@@ -70,7 +70,7 @@ player.addEventListener("playing", () => {
 
 player.addEventListener("error", () => {
   statusText.innerText = "❌ Lỗi, đang reload...";
-  setTimeout(() => player.load(), 3000);
+  setTimeout(() => player.load(), RETRY_DELAY_MS);
 });
 </script>
 
