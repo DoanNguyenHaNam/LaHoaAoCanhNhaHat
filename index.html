@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Drive Streaming Demo</title>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<h2>🎬 Drive Streaming Demo</h2>
+
+<div id="buttons"></div>
+
+<p id="status">⏳ Đang chuẩn bị...</p>
+
+<video id="player" controls></video>
+
+<script>
+fetch("src.json")
+  .then(res => res.json())
+  .then(data => init(data.videos));
+
+function init(videos) {
+  const buttonsDiv = document.getElementById("buttons");
+  videos.forEach((_, i) => {
+    const btn = document.createElement("button");
+    btn.textContent = "Video " + (i + 1);
+    btn.onclick = () => loadVideo(videos, i);
+    buttonsDiv.appendChild(btn);
+  });
+
+  // preload tất cả video
+  videos.forEach(src => {
+    const v = document.createElement("video");
+    v.src = src;
+    v.preload = "auto";
+  });
+
+  loadVideo(videos, 0);
+}
+
+const player = document.getElementById("player");
+const statusText = document.getElementById("status");
+
+function loadVideo(videos, index) {
+  statusText.innerText = "⏳ Đang buffer...";
+  player.src = videos[index];
+  player.addEventListener("progress", checkBuffer);
+}
+
+function checkBuffer() {
+  if (player.buffered.length > 0) {
+    let buffered = player.buffered.end(0);
+    if (buffered > 5) {
+      player.removeEventListener("progress", checkBuffer);
+      statusText.innerText = "▶️ Đang phát";
+      player.play().catch(() => {});
+    }
+  }
+}
+
+player.addEventListener("waiting", () => {
+  statusText.innerText = "📶 Mạng yếu, đang tải thêm...";
+});
+
+player.addEventListener("playing", () => {
+  statusText.innerText = "▶️ Đang phát";
+});
+
+player.addEventListener("error", () => {
+  statusText.innerText = "❌ Lỗi, đang reload...";
+  setTimeout(() => player.load(), 3000);
+});
+</script>
+
+</body>
+</html>
